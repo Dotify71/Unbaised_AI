@@ -147,6 +147,35 @@
             font-size: 0.9rem;
         }
 
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+            cursor: pointer;
+            accent-color: #00d4ff;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-label:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
         input, select, textarea {
             width: 100%;
             padding: 12px 15px;
@@ -264,6 +293,7 @@
             border-radius: 5px 5px 0 0;
             transition: height 0.5s ease;
             position: relative;
+            min-height: 10px;
         }
 
         .chart-bar:hover {
@@ -490,20 +520,20 @@
                 <div class="input-group">
                     <label>Protected Attributes to Check</label>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" checked> Gender
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="attr-gender" checked> Gender
                         </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" checked> Race/Ethnicity
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="attr-race" checked> Race/Ethnicity
                         </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" checked> Age
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="attr-age" checked> Age
                         </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox"> Disability
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="attr-disability"> Disability
                         </label>
-                        <label style="display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox"> Socioeconomic
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="attr-socioeconomic"> Socioeconomic
                         </label>
                     </div>
                 </div>
@@ -648,41 +678,64 @@
 
         // Bias analysis function
         function analyzeModel() {
-            const loading = document.getElementById('loading');
-            const resultsPlaceholder = document.getElementById('resultsPlaceholder');
-            const resultsContent = document.getElementById('resultsContent');
-            const modelType = document.getElementById('modelType').value;
-            const datasetSize = document.getElementById('datasetSize').value;
+            try {
+                const loading = document.getElementById('loading');
+                const resultsPlaceholder = document.getElementById('resultsPlaceholder');
+                const resultsContent = document.getElementById('resultsContent');
+                const modelType = document.getElementById('modelType').value;
+                const datasetSize = document.getElementById('datasetSize').value;
 
-            // Show loading
-            loading.classList.add('active');
-            resultsPlaceholder.style.display = 'none';
-            resultsContent.style.display = 'none';
+                // Get selected protected attributes
+                const selectedAttributes = {
+                    gender: document.getElementById('attr-gender').checked,
+                    race: document.getElementById('attr-race').checked,
+                    age: document.getElementById('attr-age').checked,
+                    disability: document.getElementById('attr-disability').checked,
+                    socioeconomic: document.getElementById('attr-socioeconomic').checked
+                };
 
-            // Simulate analysis
-            setTimeout(() => {
-                loading.classList.remove('active');
-                resultsContent.style.display = 'block';
+                // Validate at least one attribute is selected
+                const hasSelection = Object.values(selectedAttributes).some(v => v);
+                if (!hasSelection) {
+                    alert('Please select at least one protected attribute to check.');
+                    return;
+                }
 
-                // Generate results based on model type
-                const results = generateResults(modelType, datasetSize);
-                displayResults(results);
+                // Show loading
+                loading.classList.add('active');
+                resultsPlaceholder.style.display = 'none';
+                resultsContent.style.display = 'none';
 
-                // Update stats
-                const modelsScanned = document.getElementById('modelsScanned');
-                const biasesDetected = document.getElementById('biasesDetected');
-                modelsScanned.textContent = (parseInt(modelsScanned.textContent.replace(/,/g, '')) + 1).toLocaleString();
-                biasesDetected.textContent = (parseInt(biasesDetected.textContent.replace(/,/g, '')) + results.biasCount).toLocaleString();
-            }, 2000);
+                // Simulate analysis
+                setTimeout(() => {
+                    loading.classList.remove('active');
+                    resultsContent.style.display = 'block';
+
+                    // Generate results based on model type and selected attributes
+                    const results = generateResults(modelType, datasetSize, selectedAttributes);
+                    displayResults(results);
+
+                    // Update stats
+                    const modelsScanned = document.getElementById('modelsScanned');
+                    const biasesDetected = document.getElementById('biasesDetected');
+                    const currentModels = parseInt(modelsScanned.textContent.replace(/,/g, '')) || 0;
+                    const currentBiases = parseInt(biasesDetected.textContent.replace(/,/g, '')) || 0;
+                    modelsScanned.textContent = (currentModels + 1).toLocaleString();
+                    biasesDetected.textContent = (currentBiases + results.biasCount).toLocaleString();
+                }, 2000);
+            } catch (error) {
+                console.error('Error during analysis:', error);
+                alert('An error occurred during analysis. Please try again.');
+            }
         }
 
-        function generateResults(modelType, datasetSize) {
+        function generateResults(modelType, datasetSize, selectedAttributes) {
             const biasTypes = {
                 hiring: {
                     biases: [
-                        { name: 'Gender Bias in Technical Role Screening', severity: 'high', desc: 'Female candidates 23% less likely to be recommended for technical positions despite similar qualifications' },
-                        { name: 'Age-Based Experience Weighting', severity: 'medium', desc: 'Candidates over 45 receive 15% lower experience scores' },
-                        { name: 'Educational Institution Prestige Bias', severity: 'low', desc: 'Graduates from non-tier 1 institutions receive marginally lower scores' }
+                        { name: 'Gender Bias in Technical Role Screening', severity: 'high', desc: 'Female candidates 23% less likely to be recommended for technical positions despite similar qualifications', attribute: 'gender' },
+                        { name: 'Age-Based Experience Weighting', severity: 'medium', desc: 'Candidates over 45 receive 15% lower experience scores', attribute: 'age' },
+                        { name: 'Educational Institution Prestige Bias', severity: 'low', desc: 'Graduates from non-tier 1 institutions receive marginally lower scores', attribute: 'socioeconomic' }
                     ],
                     recommendations: [
                         'Remove gender-specific language from job descriptions',
@@ -693,9 +746,9 @@
                 },
                 lending: {
                     biases: [
-                        { name: 'Zip Code Redlining Effect', severity: 'high', desc: 'Applicants from certain zip codes 31% less likely to be approved' },
-                        { name: 'Income Source Discrimination', severity: 'medium', desc: 'Self-employed and gig workers receive 18% lower credit scores' },
-                        { name: 'Length of Credit History Bias', severity: 'medium', desc: 'Recent immigrants penalized for lack of credit history' }
+                        { name: 'Zip Code Redlining Effect', severity: 'high', desc: 'Applicants from certain zip codes 31% less likely to be approved', attribute: 'socioeconomic' },
+                        { name: 'Income Source Discrimination', severity: 'medium', desc: 'Self-employed and gig workers receive 18% lower credit scores', attribute: 'socioeconomic' },
+                        { name: 'Length of Credit History Bias', severity: 'medium', desc: 'Recent immigrants penalized for lack of credit history', attribute: 'race' }
                     ],
                     recommendations: [
                         'Implement alternative credit scoring models',
@@ -706,9 +759,9 @@
                 },
                 healthcare: {
                     biases: [
-                        { name: 'Racial Disparity in Pain Assessment', severity: 'high', desc: 'Black patients 28% less likely to receive appropriate pain medication recommendations' },
-                        { name: 'Age-Based Treatment Prioritization', severity: 'medium', desc: 'Patients over 70 receive 20% fewer aggressive treatment options' },
-                        { name: 'Gender Bias in Heart Disease Diagnosis', severity: 'medium', desc: 'Women 22% less likely to be referred for cardiac testing' }
+                        { name: 'Racial Disparity in Pain Assessment', severity: 'high', desc: 'Black patients 28% less likely to receive appropriate pain medication recommendations', attribute: 'race' },
+                        { name: 'Age-Based Treatment Prioritization', severity: 'medium', desc: 'Patients over 70 receive 20% fewer aggressive treatment options', attribute: 'age' },
+                        { name: 'Gender Bias in Heart Disease Diagnosis', severity: 'medium', desc: 'Women 22% less likely to be referred for cardiac testing', attribute: 'gender' }
                     ],
                     recommendations: [
                         'Implement bias-aware clinical decision support',
@@ -719,9 +772,9 @@
                 },
                 criminal: {
                     biases: [
-                        { name: 'Racial Disparity in Risk Scores', severity: 'high', desc: 'Defendants from minority groups receive 35% higher risk scores' },
-                        { name: 'Socioeconomic Background Bias', severity: 'high', desc: 'Low-income defendants 27% more likely to be flagged as high-risk' },
-                        { name: 'Geographic Location Bias', severity: 'medium', desc: 'Defendants from certain neighborhoods receive elevated risk assessments' }
+                        { name: 'Racial Disparity in Risk Scores', severity: 'high', desc: 'Defendants from minority groups receive 35% higher risk scores', attribute: 'race' },
+                        { name: 'Socioeconomic Background Bias', severity: 'high', desc: 'Low-income defendants 27% more likely to be flagged as high-risk', attribute: 'socioeconomic' },
+                        { name: 'Geographic Location Bias', severity: 'medium', desc: 'Defendants from certain neighborhoods receive elevated risk assessments', attribute: 'socioeconomic' }
                     ],
                     recommendations: [
                         'Remove race and proxy variables from risk models',
@@ -732,9 +785,9 @@
                 },
                 content: {
                     biases: [
-                        { name: 'Cultural Context Misunderstanding', severity: 'medium', desc: 'Content from non-Western cultures 19% more likely to be flagged' },
-                        { name: 'Language Dialect Bias', severity: 'medium', desc: 'African American Vernacular English content 24% more likely to be moderated' },
-                        { name: 'Political Leaning Detection', severity: 'low', desc: 'Slight bias detected in political content classification' }
+                        { name: 'Cultural Context Misunderstanding', severity: 'medium', desc: 'Content from non-Western cultures 19% more likely to be flagged', attribute: 'race' },
+                        { name: 'Language Dialect Bias', severity: 'medium', desc: 'African American Vernacular English content 24% more likely to be moderated', attribute: 'race' },
+                        { name: 'Political Leaning Detection', severity: 'low', desc: 'Slight bias detected in political content classification', attribute: 'socioeconomic' }
                     ],
                     recommendations: [
                         'Train models on diverse cultural datasets',
@@ -745,9 +798,9 @@
                 },
                 custom: {
                     biases: [
-                        { name: 'Data Representation Imbalance', severity: 'medium', desc: 'Training data shows 15% imbalance across demographic groups' },
-                        { name: 'Feature Correlation with Protected Attributes', severity: 'low', desc: 'Some features may indirectly encode demographic information' },
-                        { name: 'Outcome Distribution Variance', severity: 'low', desc: 'Minor variation in outcomes across subgroups detected' }
+                        { name: 'Data Representation Imbalance', severity: 'medium', desc: 'Training data shows 15% imbalance across demographic groups', attribute: 'race' },
+                        { name: 'Feature Correlation with Protected Attributes', severity: 'low', desc: 'Some features may indirectly encode demographic information', attribute: 'gender' },
+                        { name: 'Outcome Distribution Variance', severity: 'low', desc: 'Minor variation in outcomes across subgroups detected', attribute: 'age' }
                     ],
                     recommendations: [
                         'Perform subgroup analysis on model performance',
@@ -759,44 +812,66 @@
             };
 
             const result = biasTypes[modelType] || biasTypes.custom;
-            const biasCount = result.biases.filter(b => b.severity !== 'low').length;
+
+            // Filter biases based on selected attributes
+            const filteredBiases = result.biases.filter(bias => {
+                if (!bias.attribute) return true; // Include biases without specific attribute
+                return selectedAttributes[bias.attribute] === true;
+            });
+
+            // If no biases match selected attributes, show a generic message
+            const finalBiases = filteredBiases.length > 0 ? filteredBiases : [
+                { name: 'No specific biases detected for selected attributes', severity: 'low', desc: 'Analysis complete. Consider expanding attribute selection for comprehensive review.', attribute: null }
+            ];
+
+            const biasCount = finalBiases.filter(b => b.severity !== 'low').length;
 
             return {
-                ...result,
+                biases: finalBiases,
+                recommendations: result.recommendations,
                 biasCount,
                 overallScore: Math.floor(60 + Math.random() * 30)
             };
         }
 
         function displayResults(results) {
-            const resultsList = document.getElementById('resultsList');
-            const biasIndicator = document.getElementById('biasIndicator');
-            const recommendationList = document.getElementById('recommendationList');
+            try {
+                const resultsList = document.getElementById('resultsList');
+                const biasIndicator = document.getElementById('biasIndicator');
+                const recommendationList = document.getElementById('recommendationList');
 
-            // Update bias indicator
-            const position = 100 - results.overallScore;
-            biasIndicator.style.left = position + '%';
+                if (!results || !results.biases || !results.recommendations) {
+                    console.error('Invalid results data');
+                    return;
+                }
 
-            // Display results
-            resultsList.innerHTML = results.biases.map(bias => `
-                <div class="result-item ${bias.severity}-risk">
-                    <div class="result-title">${bias.name} <span class="badge" style="background: ${
-                        bias.severity === 'high' ? 'rgba(255, 68, 68, 0.3)' :
-                        bias.severity === 'medium' ? 'rgba(255, 255, 0, 0.3)' :
-                        'rgba(0, 255, 136, 0.3)'
-                    }; color: ${
-                        bias.severity === 'high' ? '#ff4444' :
-                        bias.severity === 'medium' ? '#ffff00' :
-                        '#00ff88'
-                    };">${bias.severity.toUpperCase()}</span></div>
-                    <div class="result-desc">${bias.desc}</div>
-                </div>
-            `).join('');
+                // Update bias indicator
+                const position = Math.max(0, Math.min(100, 100 - results.overallScore));
+                biasIndicator.style.left = position + '%';
 
-            // Display recommendations
-            recommendationList.innerHTML = results.recommendations.map(rec => `
-                <li>${rec}</li>
-            `).join('');
+                // Display results
+                resultsList.innerHTML = results.biases.map(bias => `
+                    <div class="result-item ${bias.severity}-risk">
+                        <div class="result-title">${bias.name} <span class="badge" style="background: ${
+                            bias.severity === 'high' ? 'rgba(255, 68, 68, 0.3)' :
+                            bias.severity === 'medium' ? 'rgba(255, 255, 0, 0.3)' :
+                            'rgba(0, 255, 136, 0.3)'
+                        }; color: ${
+                            bias.severity === 'high' ? '#ff4444' :
+                            bias.severity === 'medium' ? '#ffff00' :
+                            '#00ff88'
+                        };">${bias.severity.toUpperCase()}</span></div>
+                        <div class="result-desc">${bias.desc}</div>
+                    </div>
+                `).join('');
+
+                // Display recommendations
+                recommendationList.innerHTML = results.recommendations.map(rec => `
+                    <li>${rec}</li>
+                `).join('');
+            } catch (error) {
+                console.error('Error displaying results:', error);
+            }
         }
 
         // Initialize
@@ -806,10 +881,10 @@
             // Animate chart bars
             const chartBars = document.querySelectorAll('.chart-bar');
             chartBars.forEach((bar, index) => {
-                const height = bar.style.height;
+                const originalHeight = bar.style.height;
                 bar.style.height = '0%';
                 setTimeout(() => {
-                    bar.style.height = height;
+                    bar.style.height = originalHeight;
                 }, 100 + index * 100);
             });
         });
